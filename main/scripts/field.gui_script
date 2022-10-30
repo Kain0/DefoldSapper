@@ -1,0 +1,152 @@
+local state_module = require "main.modules.state_module"
+
+field = {}
+colors = {}
+clicked = {}
+search_color = nil
+N = 10
+M = 10
+points = 0
+delay_time = 3
+can_restart = true
+
+function init(self) 
+	msg.post(".", "acquire_input_focus")
+	for i = 1, N do
+		field[i] = {}
+		colors[i] = {}
+		for j = 1, M do
+			field[i][j] = "sq" .. tostring(i) .. tostring(j)
+			colors[i][j] = 0
+			if (i + j) % 2 == 0 then
+				node = gui.get_node(field[i][j] .. "/square")
+				gui.set_texture(node, "field")
+				gui.play_flipbook(node, "grey-light")
+			end
+			
+		end
+	end
+	math.randomseed(os.time())
+
+end
+
+function on_input(self, action_id, action)
+	if action.pressed and action_id == hash("touch")
+	and gui.pick_node(gui.get_node("startButton"), action.x, action.y) and can_restart then
+		restart()
+	
+	elseif state_module.state == 1 then
+		if action.pressed and action_id == hash("touch") then
+			process_click_on_circle(action)
+		end
+	end
+end
+
+function restart()
+	state_module.state = 0
+	points = 0
+	search_color = nil
+	clicked = {}
+	update_points()
+	gui.set_text(gui.get_node("startButtonText"), "Restart")
+	randomize_colors()
+	can_restart = false
+	timer.delay(delay_time, false, prepare_game_callback)
+end
+
+function process_click_on_circle(action)
+	for i = 1, N do
+		stop = false
+		for j = 1, M do
+			node = gui.get_node(field[i][j] .. "/circle")
+
+			if gui.pick_node(node, action.x, action.y) then
+				if clicked[i*N + j] == nil then
+					clicked[i*N + j] = true
+					update_color(i, j, colors[i][j])
+					if search_color == nil then
+						search_color = colors[i][j]
+					end
+
+					if search_color == colors[i][j] then
+						points = points + 1
+						update_points()
+					else
+						state_module.state = 2
+						gui.set_text(gui.get_node("pointsText"), "Game is Over. Points: " .. tostring(points))
+						state_module.state = 0
+					end
+				end
+				stop = true
+				break
+			end
+		end
+		if stop then break end
+	end
+end
+
+
+function update_color(i, j, color)
+	node = gui.get_node(field[i][j] .. "/circle")
+	if color == 0 then
+		gui.set_texture(node, "field")
+		gui.play_flipbook(node, "grey-point")
+	elseif color == 1 then
+		gui.set_texture(node, "field")
+		gui.play_flipbook(node, "red-point")
+	elseif color == 2 then 
+		gui.set_texture(node, "field")
+		gui.play_flipbook(node, "blue-point")
+	end
+	
+
+end
+
+
+function update_points()
+	gui.set_text(gui.get_node("pointsText"), "Points: " .. tostring(points))
+end
+
+function randomize_colors()
+	new_colors = {}
+	for i = 1, N * M / 2 do 
+		new_colors[i] = 1
+	end
+	for i = N * M / 2 + 1, N * M do 
+		new_colors[i] = 2
+	end
+
+	new_colors = shuffle(new_colors)
+	for i = 1, N do
+		stop = false
+		for j = 1, M do
+			colors[i][j] = new_colors[(i - 1) * N + j]
+			update_color(i, j, colors[i][j])
+
+		end
+	end
+end
+
+function hide_colors()
+	for i = 1, N do
+		for j = 1, M do
+			update_color(i, j, 0)
+		end
+	end
+end
+
+
+
+function prepare_game_callback(self, handle, time_elapsed)
+	hide_colors()
+	can_restart = true
+	state_module.state = 1
+end
+
+function shuffle(tbl)
+	for i = #tbl, 2, -1 do
+		local j = math.random(i)
+		tbl[i], tbl[j] = tbl[j], tbl[i]
+	end
+	return tbl
+end

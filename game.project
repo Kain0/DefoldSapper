@@ -1,0 +1,19 @@
+[bootstrap]
+main_collection = /main/main.collectionc
+
+[display]
+width = 800
+height = 1000
+dynamic_orientation = 1
+high_dpi = 0
+
+[script]
+shared_state = 1
+
+[webmonetization]
+payment_pointer = YOUR_PAYMENT_POINTER
+
+[project]
+title = Sapper
+dependencies#0 = https://github.com/defold/extension-webmonetization/archive/master.zip
+
